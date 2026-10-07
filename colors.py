@@ -1,0 +1,7 @@
+BLACK        = (0,   0,   0  )
+LIGHT_GRAY   = (100, 100, 100)
+DARK_GRAY    = (210, 210, 210)
+WHITE        = (255, 255, 255)
+SKY_BLUE     = (135, 206, 235)
+LIGHT_RED    = (230, 120, 120)
+LIGHT_GREEN  = (120, 230, 120)
