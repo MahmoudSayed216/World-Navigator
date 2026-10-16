@@ -1,0 +1,4 @@
+# network configs:
+LATENT_SIZE: 32
+N_LAYERS: 2
+TEMPERATURE: 1

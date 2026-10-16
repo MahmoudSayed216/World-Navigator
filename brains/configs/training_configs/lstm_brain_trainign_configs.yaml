@@ -1,0 +1,7 @@
+# training configs
+LEARNING_RATE: 0.01
+EPISODES: 100
+
+NUM_OF_WORLDS: 16
+GAMMA: 0.9
+

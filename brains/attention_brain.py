@@ -1,0 +1,2 @@
+class AttentionBrain:
+    pass
