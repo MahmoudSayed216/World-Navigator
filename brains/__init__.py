@@ -1,0 +1,2 @@
+from brains.attention_brain import AttentionBrain
+from brains.lstm_brain import LSTMBrain
