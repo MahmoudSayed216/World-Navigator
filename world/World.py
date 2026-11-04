@@ -42,7 +42,7 @@ class World:
         self.create_goal() #ENSURE A MINIMUM DISTANCE BETWEEN AGENT AND goal
         self.create_obstacles() #ENSURE TRAJECTORY WON'T INTERFER WITH goal
 
-        logger.log(f"World created with properties: \n{self.world_info()}", end="\n")
+        # logger.log(f"World created with properties: \n{self.world_info()}", end="\n")
 
 
     def create_agent(self):
@@ -86,7 +86,7 @@ class World:
 
                 if self.check_for_collisions(x, y, w, h, range_of_motion, axis) == False: #No Collisions
                     break
-            print(f"{i+1} obstacles have been created")
+            # print(f"{i+1} obstacles have been created")
             obstacle = Obstacle(x, y, w, h, self.unit_of_motion, range_of_motion, axis)#NEEDS FURTHER VALIDATION TO ENSURE IT WONT COLLIDED WITH GOAL WHILE MOVING)
             self.obstacles.append(obstacle)
 
@@ -150,8 +150,21 @@ class World:
         for obstacle in self.obstacles:
             obstacle.set_unit_of_motion(0)
 
+    ##TODO: better be a dict
+    def next_state(self, action=None, uom=None):
+        if action is None and uom is None:
+            actions, uoms = self.sequence_of_motion
+            action = World.ACTIONS_MAP[actions[self.iterator]]
+            uom = uoms[self.iterator]
+            self.iterator+=1
+            self.agent.set_unit_of_motion(uom)
+            self.agent.next_state(action)
+            for obstacle in self.obstacles:
+                obstacle.next_state()
+            return None
 
-    def next_state(self, action, uom):
+        
+
         if self.terminated:
             return self.get_current_state()
         
@@ -185,7 +198,63 @@ class World:
 
         if terminated:
             self.terminated = 1
+    def get_world_initial_properties(self):
 
-    def simulate(self, sequence) -> None: #THIS ISN'T HOW SIMULATE WORK
-        self.next_state([0, 1], 1)
+        agent_initial_position = (self.agent.x_pos, self.agent.y_pos)
+        goal_initial_position = (self.goal.x_pos, self.goal.y_pos)
+        
+        #TODO: PUT REST OF THE WORLDS PROPERTIES LIKE INITIAL UOM anD AGENT SIDE LENGTH ....
+        return {
+            "agent_initial_position": agent_initial_position,
+            "goal_initial_position": goal_initial_position,
+            "obstacles": [
+                {
+                    "x_pos": o.x_pos,
+                    "y_pos": o.y_pos,
+                    "width": o.width,
+                    "height": o.height,
+                    "unit_of_motion": o.unit_of_motion,
+                    "range_of_motion": o.range_of_motion,
+                    "axis_of_motion": o.axis_of_motion,
+                } for o in self.obstacles
+            ] 
+        }
+    # def simulate(self) -> None: #THIS ISN'T HOW SIMULATE WORK
+        # self.sequence_of_motion[self.iterator]
 
+        # self.next_state([0, 1], 1)
+
+    def set_sequence_of_motion(self, sequence_of_motion):
+        self.iterator = 0
+        self.sequence_of_motion = sequence_of_motion
+
+    @classmethod
+    def from_prebuilt_world(cls, world_height, world_width, agent_side_length, world_info):
+        world = cls.__new__(cls)          # new instance, skips __init__ (which would generate a random world)
+
+        world.world_height = world_height
+        world.world_width = world_width
+        world.agent_side_length = agent_side_length
+        world.unit_of_motion = 1
+        world.terminated = False
+        world.margin = 50
+        x, y = world_info["agent_initial_position"]
+        world.agent = Agent(x, y, agent_side_length, agent_side_length, world.unit_of_motion, 0)
+
+        x, y = world_info["goal_initial_position"]
+        world.goal = Agent(x, y, agent_side_length, agent_side_length, world.unit_of_motion, 0)
+
+        world.obstacles = [Obstacle(**oci) for oci in world_info["obstacles"]]
+        return world
+
+    # def create_obstacles(self):
+    #     self.obstacles = []
+    #     for i in range(self.n_obstacles):
+    #         while True:
+    #             w, h, range_of_motion, axis, x, y = self.create_obstacle_spatial_attributes()
+
+    #             if self.check_for_collisions(x, y, w, h, range_of_motion, axis) == False: #No Collisions
+    #                 break
+    #         print(f"{i+1} obstacles have been created")
+    #         obstacle = Obstacle(x, y, w, h, self.unit_of_motion, range_of_motion, axis)#NEEDS FURTHER VALIDATION TO ENSURE IT WONT COLLIDED WITH GOAL WHILE MOVING)
+    #         self.obstacles.append(obstacle)

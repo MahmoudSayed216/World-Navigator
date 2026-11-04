@@ -57,9 +57,9 @@ def process_states_vector(states, max_obstacles, world_width, world_height, max_
     # state = agents XYWH, goal XYWH, N Obstacles XYWHAD
     # return -> agents XY goal XY
     n_worlds = len(states)
-    print("len(state): ", len(states))
-    print("len(state[0]): ", len(states[0]))
-    print("STATE: \n", states)
+    # print("len(state): ", len(states))
+    # print("len(state[0]): ", len(states[0]))
+    # print("STATE: \n", states)
     
     # change this cw stupid shit
     cw_agents = [] # list of lists
@@ -104,4 +104,15 @@ def process_states_vector(states, max_obstacles, world_width, world_height, max_
     cw_obstacles[:, :, 1] = cw_obstacles[:, :, 1] - cw_agents[:, 1:2]
     cw_obstacles = cw_obstacles*mask
 
-    return cw_agents, cw_goals, cw_obstacles, cw_termination_states
+    return cw_agents, cw_goals, cw_obstacles, cw_termination_states.squeeze(1)
+
+
+def get_worlds_initial_properties(worlds: list[World]):
+    initial_props = []
+    for world in worlds:
+        initial_props.append(
+            world.get_world_initial_properties()
+        )
+
+    return initial_props
+

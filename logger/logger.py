@@ -58,7 +58,7 @@ class Logger:
     #     print(f"{color_code}[{source}:{counter}] "f"{self.reset}{string}", end=end,)
     
     
-    #? just for the sake of abstraction, but this is total shift obviously
+    #? just for the sake of abstraction, but this is total shit obviously
     def _write_to_console(self, string, end="\n"):
         print(string)
 
@@ -134,10 +134,12 @@ class Logger:
             time = timestamp,
             end=end
         ))
+
         console_string = template.safe_substitute(
             color_code = color_code,
             reset = self.reset
         )
+        
         file_string = template.safe_substitute(
             color_code = "",
             reset = ""

@@ -78,7 +78,7 @@ class UI:
 	
 
 
-    def main_loop(self):
+    def main_loop(self, callback = None):
         run = True
         while run:
             self.clock.tick(self.FPS)
@@ -89,7 +89,10 @@ class UI:
                     run = False
             #? I THINK THESE 2 LAYERS SHOULDN'T BE ABLE TO SEE EACH OTHER
             # print("next state: ", self.world.next_state([0, 0], 1))
-            self.world.simulate([])
+            # self.world.simulate([])
+            self.world.next_state()
+            if callback is not None:
+                callback()
             
 			
 			
