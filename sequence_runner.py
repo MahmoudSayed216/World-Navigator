@@ -23,9 +23,9 @@ def main():
     logger.set_debug_mode(debug_mode=configs["DEBUG"])
     logger.set_logs_dir("logs")
 
-    EXPERIMENT = "LSTM BRAIN_ABC_00-32-33"
-    EPISODE = 30
-    WORLD = 29
+    EXPERIMENT = "LSTM BRAIN_ABC_01-23-23"
+    EPISODE = 60
+    WORLD = 14
 
     RUN_PATH = f"/home/mahmoud-sayed/Desktop/Code/Python/Reinforcement Learning Projects/World Navigator/experiments/{EXPERIMENT}/episodes"
     rh = RunsHandler(RUN_PATH)
