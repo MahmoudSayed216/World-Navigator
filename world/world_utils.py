@@ -1,26 +1,28 @@
 from world import World
 import random
 import torch
-
+from utils.utils import *
 
 def create_worlds(num_worlds, worlds_height, worlds_width, min_obstacles, max_obstacles, minimum_distance_between_agent_and_goal,
-                  knowledge_type, agent_side_length, obstacle_constraints_shorter_side, obstacle_constraints_longer_side,
-                  min_unit_of_motion, max_unit_of_motion, passage_space_factor):
+                  maximum_distance_between_agent_and_goal, knowledge_type, agent_side_length, obstacle_constraints_shorter_side,
+                    obstacle_constraints_longer_side, min_unit_of_motion, max_unit_of_motion, passage_space_factor):
     
     worlds = []
+    distances = power_dist(minimum_distance_between_agent_and_goal, maximum_distance_between_agent_and_goal, num_worlds, 1.25)
+    # print("distances: ",distances)
     for i in range(num_worlds):
         n_obst = int(round(random.uniform(min_obstacles, max_obstacles)))
-        uom = int(round(random.uniform(min_unit_of_motion, max_unit_of_motion)))
+        # uom = int(round(random.uniform(min_unit_of_motion, max_unit_of_motion)))
         world = World(
             world_height=                               worlds_height,
             world_width=                                worlds_width,
             n_obstacles=                                n_obst,
-            minimum_distance_between_agent_and_goal=    minimum_distance_between_agent_and_goal,
+            minimum_distance_between_agent_and_goal=    distances[i],
             knowledge_type=                             knowledge_type,
             agent_side_length=                          agent_side_length,
             obstacle_constraints_shorter_side=          obstacle_constraints_shorter_side,
             obstacle_constraints_longer_side=           obstacle_constraints_longer_side,
-            unit_of_motion=                             uom,
+            unit_of_motion=                             1,
             passage_space_factor=                       passage_space_factor
         )
 

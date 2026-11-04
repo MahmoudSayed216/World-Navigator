@@ -1,13 +1,3 @@
-# CREATE A FILE CALLED SIMULATE.PY THAT:
-    # READS THE NETWORK
-    # IMPORTS THE WORLD
-    # INSTANTIATES A WORLD
-    # RUNS FULL SIMULATION AND GENERATES A SEQUENCE
-    # VISUALIZES THE SEQUENCE   
-
-#! THERE'S CLEARLY A PROBLEM WITH THE INITIAL DISTANCE BETWEEN THE GOAL AND THE AGENT
-#! THERE'S CLEARLY A PROBLEM WITH THE DIMENSIONS OF THE OBSTACLES AND AS A RESULT, THEY ALL MOVE IN THE SAME DIRECTION
-
 import yaml
 from world import World
 from ui import UI
@@ -33,9 +23,9 @@ def main():
     logger.set_debug_mode(debug_mode=configs["DEBUG"])
     logger.set_logs_dir("logs")
 
-    EXPERIMENT = "LSTM BRAIN_ABC_18-22-31"
-    EPISODE = 63
-    WORLD = 18
+    EXPERIMENT = "LSTM BRAIN_ABC_00-32-33"
+    EPISODE = 30
+    WORLD = 29
 
     RUN_PATH = f"/home/mahmoud-sayed/Desktop/Code/Python/Reinforcement Learning Projects/World Navigator/experiments/{EXPERIMENT}/episodes"
     rh = RunsHandler(RUN_PATH)
@@ -65,7 +55,8 @@ def main():
     i = 0
     def print_reward():
         nonlocal i
-        print("REWARD: ", _[i])
+        print(f"{i}: REWARD: ", _[i])
+        
         i+=1
     ui.main_loop(callback=print_reward)
 

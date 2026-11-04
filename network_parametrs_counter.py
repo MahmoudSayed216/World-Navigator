@@ -1,4 +1,5 @@
 from brains import LSTMBrain
+from brains import DeepSetsBrain
 import torch
 
 
@@ -14,8 +15,8 @@ agent_state = torch.rand(size=(32, 3))
 goal_state = torch.rand(size=(32, 2))
 obstacles_state = torch.rand(size=(32, 15, 6))
 
-model = LSTMBrain(latent_size=48)
-
+# model = LSTMBrain(latent_size=48)
+model = DeepSetsBrain(latent_size=96, n_layers=6, )
 
 output = model(agent_state, goal_state, obstacles_state)
 

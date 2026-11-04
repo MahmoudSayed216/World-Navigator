@@ -1,5 +1,6 @@
 import math
 import yaml
+import random
 
 def euclidean_distance(x1, y1, x2, y2):
     return math.sqrt((x2-x1)**2 + (y2-y1)**2)
@@ -49,3 +50,10 @@ def count_params(model):
     total_params = sum(p.numel() for p in model.parameters())
     
     return total_params
+
+
+def power_dist(a, b, n, alpha=2):
+    return [
+        a + (b - a) * random.random() ** (1 / alpha)
+        for _ in range(n)
+    ]

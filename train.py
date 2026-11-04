@@ -4,7 +4,7 @@ from logger import logger
 from datetime import datetime
 from world import World, world_utils
 import os
-from brains import LSTMBrain
+from brains import DeepSetsBrain
 from checkpoints_handler import CheckpointsHandler
 from runs_handler import RunsHandler
 from torch.distributions import Categorical
@@ -33,10 +33,17 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
     WORLD_WIDTH = world_configs["MIN_WORLD_WIDTH"]
     WORLD_HEIGHT = world_configs["MIN_WORLD_HEIGHT"]
     MAX_UNIT_OF_MOTION = world_configs["MAX_UNIT_OF_MOTION"]
-    model = LSTMBrain(network_configs["LATENT_SIZE"], network_configs["N_LAYERS"])
+    # model = LSTMBrain(, network_configs["N_LAYERS"])
+    model = DeepSetsBrain(network_configs["LATENT_SIZE"], n_layers=6, )
     optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
+
+
+    THETA = reward_configs["THETA"]
+    BETA = reward_configs["BETA"]
+    C = reward_configs["C"]
+    K = reward_configs["K"]
     
-    reward_f = BasicReward(0.003, 0.001, 10, 10)
+    reward_f = BasicReward(THETA, BETA, C, K)
     ckpt_handler = CheckpointsHandler(save_every= training_configs["SAVE_EVERY"], increasing_metric=True, output_path=configs["CKPTS_PATH"])
     runs_handler = RunsHandler(runs_dir_path=configs["RUNS_PATH"])
 
@@ -63,7 +70,8 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
             worlds_width=                               WORLD_HEIGHT,
             min_obstacles=                              world_configs["MIN_OBSTACLES"],
             max_obstacles=                              world_configs["MAX_OBSTACLES"],
-            minimum_distance_between_agent_and_goal=    world_configs["MINIMUM_DISTANCE_BETWEEN_AGENT_AND_GOAL"],
+            minimum_distance_between_agent_and_goal=    world_configs["MINIMUM_DISTANCE_BETWEEN_AGENT_AND_GOAL_LB"],
+            maximum_distance_between_agent_and_goal=    world_configs["MINIMUM_DISTANCE_BETWEEN_AGENT_AND_GOAL_UB"],
             knowledge_type=                             world_configs["KNOWLEDGE_TYPE"],
             agent_side_length=                          world_configs["AGENT_SIDE_LENGTH"],
             obstacle_constraints_shorter_side=          world_configs["OBSTACLE_CONSTRAINTS_SHORTER_SIDE"],
@@ -81,6 +89,8 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
         log_probs = []                                     # keeps the graph, used for the loss
         logger.log(f"Episode:  {str(i).rjust(3)} / {EPISODES}")
         temperature = temperature * TEMPERATURE_INCREASE_FACTOR
+        active_masks = []
+        active_mask = torch.ones(NUMBER_OF_WORLDS)
         for step in range(1, MAX_STEPS+1):
             # if step%500 == 0:
                 # logger.log(f"Episode:  {str(i).rjust(3)} / {EPISODES},  Step: {str(step).rjust(4)} / {MAX_STEPS}")
@@ -95,22 +105,24 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
             a = action_dist.sample()
             u = uom_dist.sample()                          # + 1 if uom must be >= 1
             log_probs.append(action_dist.log_prob(a) + uom_dist.log_prob(u))   # (B,), has grad
+            active_masks.append(active_mask.clone())
 
-            new_states = world_utils.move_worlds_to_next_state(worlds, a, u)
+            new_states = world_utils.move_worlds_to_next_state(worlds, a, u+1)
             n_agents, n_goals, _, n_term = world_utils.process_states_vector(new_states, MAX_OBSTACLES, WORLD_WIDTH, WORLD_HEIGHT, MAX_UNIT_OF_MOTION)
-
+            active_mask *= (n_term == 0).float()
             goal_xy = n_goals + n_agents[:, :2]
 
             r = reward_f.reward(agents_states, n_agents, goal_xy, n_term)      # (B,), no grad
 
             for w in range(NUMBER_OF_WORLDS):
                 actions[w].append(a[w].item())
-                uoms[w].append(u[w].item())
+                uoms[w].append(u[w].item()+1)
                 rewards[w].append(r[w].item())
         
         
         log_probs_t = torch.stack(log_probs)               # (T, B), has grad
         rewards_t   = torch.tensor(rewards).T              # rewards is B lists of T floats -> (T, B)
+        active_masks_t = torch.stack(active_masks)
 
         returns = torch.zeros_like(rewards_t)
         G = torch.zeros(NUMBER_OF_WORLDS)
@@ -118,9 +130,16 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
             G = rewards_t[t] + GAMMA * G
             returns[t] = G
 
-        adv = (returns - returns.mean()) / (returns.std() + 1e-8)
+        valid_returns = returns[active_masks_t.bool()]
 
-        loss = -(log_probs_t * adv).mean()
+        adv = torch.zeros_like(returns)
+
+        adv[active_masks_t.bool()] = (
+            valid_returns - valid_returns.mean()
+        ) / (valid_returns.std() + 1e-8)
+
+
+        loss = -(log_probs_t * adv * active_masks_t).sum() / active_masks_t.sum().clamp_min(1)
         loss.backward()
         optimizer.step()
         mean_total_reward = rewards_t.sum(0).mean().item()   # sum over steps -> (B,), mean over worlds
@@ -183,8 +202,8 @@ def main():
 
 
     WORLD_CONFIGS_PATH =    "world_configs.yaml"
-    NETOWRK_CONFIGS_PATH =  "brains/configs/network_configs/lstm_brain_configs.yaml"
-    TRAINING_CONFIGS_PATH = "brains/configs/training_configs/lstm_brain_training_configs.yaml"
+    NETOWRK_CONFIGS_PATH =  "brains/configs/network_configs/deep_sets_brain_configs.yaml"
+    TRAINING_CONFIGS_PATH = "brains/configs/training_configs/deep_sets_brain_training_configs.yaml"
     REWARD_CONFIGS_PATH = "reward_configs.yaml"
     CONFIGS_PATH =          "configs.yaml"
 

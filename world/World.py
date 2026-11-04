@@ -161,6 +161,7 @@ class World:
             self.agent.next_state(action)
             for obstacle in self.obstacles:
                 obstacle.next_state()
+
             return None
 
         

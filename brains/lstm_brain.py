@@ -11,32 +11,32 @@ class LSTMBrain(nn.Module):
         
         # agent processor
         self.agent_processor1 = nn.Linear(in_features=3, out_features=64)
-        self.agent_bn1 = nn.BatchNorm1d(num_features=64)
+        self.agent_bn1 = nn.LayerNorm(64)
         self.agent_non_linearity1 = nn.ReLU()
         self.agent_processor2 = nn.Linear(in_features=64, out_features=latent_size)
-        self.agent_bn2 = nn.BatchNorm1d(num_features=latent_size)
+        self.agent_bn2 = nn.LayerNorm(latent_size)
         self.agent_non_linearity2 = nn.ReLU()
 
 
         # goal processor
         self.goal_processor1 = nn.Linear(in_features=2, out_features=64)
-        self.goal_bn1 = nn.BatchNorm1d(num_features=64)
+        self.goal_bn1 = nn.LayerNorm(64)
         self.goal_non_linearity1 = nn.ReLU()
         self.goal_processor2 = nn.Linear(in_features=64, out_features= latent_size)
-        self.goal_bn2 = nn.BatchNorm1d(num_features=latent_size)
+        self.goal_bn2 = nn.LayerNorm(latent_size)
         self.goal_non_linearity2 = nn.ReLU()
 
         # obstacles processor
         self.obstacles_processor1 = nn.LSTM(input_size=6, hidden_size=latent_size, num_layers=n_layers, batch_first=True)
-        self.obstacles_bn1 = nn.BatchNorm1d(num_features=latent_size)
+        self.obstacles_bn1 = nn.LayerNorm(latent_size)
         self.obstacles_non_linearity1 = nn.ReLU()
 
         # world processor
         self.world_processor1 = nn.Linear(in_features=latent_size*3, out_features=latent_size)
-        self.world_bn1 = nn.BatchNorm1d(num_features=latent_size)
+        self.world_bn1 = nn.LayerNorm(latent_size)
         self.world_non_linearity1 = nn.ReLU()
         self.world_processor2 = nn.Linear(in_features=latent_size, out_features=32)
-        self.world_bn2 = nn.BatchNorm1d(num_features=32)
+        self.world_bn2 = nn.LayerNorm(32)
         self.world_non_linearity2 = nn.ReLU()
 
         self.direction_output = nn.Linear(in_features=32, out_features=4)
