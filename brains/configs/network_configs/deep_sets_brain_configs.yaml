@@ -1,6 +1,6 @@
 # You probably need to use max pooling on the deep sets# network configs:
-LATENT_SIZE: 75
-N_LAYERS: 5
+LATENT_SIZE: 196
+N_LAYERS: 6
 TEMPERATURE: 3
 TEMPERATURE_INCREASE_FACTOR: 0.9988
 MODEL_NAME: LSTM_BRAIN

@@ -21,6 +21,8 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
     
     
     logger.log("Initializing training environment")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logger.log(f"Training device: {device}")
 
     EPISODES = training_configs["EPISODES"]
     LEARNING_RATE = training_configs["LEARNING_RATE"]
@@ -34,7 +36,7 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
     WORLD_HEIGHT = world_configs["MIN_WORLD_HEIGHT"]
     MAX_UNIT_OF_MOTION = world_configs["MAX_UNIT_OF_MOTION"]
     # model = LSTMBrain(, network_configs["N_LAYERS"])
-    model = DeepSetsBrain(network_configs["LATENT_SIZE"], n_layers=6, )
+    model = DeepSetsBrain(network_configs["LATENT_SIZE"], n_layers=network_configs["N_LAYERS"]).to(device)
     optimizer = Adam(params=model.parameters(), lr=LEARNING_RATE)
 
 
@@ -62,7 +64,7 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
                         """)
 
     for i in range(1, EPISODES+1):
-        optimizer.zero_grad()    
+        optimizer.zero_grad(set_to_none=True)    
         logger.log("Creating worlds ...")
         worlds = world_utils.create_worlds(
             num_worlds=                                 NUMBER_OF_WORLDS,
@@ -90,14 +92,18 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
         logger.log(f"Episode:  {str(i).rjust(3)} / {EPISODES}")
         temperature = temperature * TEMPERATURE_INCREASE_FACTOR
         active_masks = []
-        active_mask = torch.ones(NUMBER_OF_WORLDS)
+        active_mask = torch.ones(NUMBER_OF_WORLDS, device=device)
         for step in range(1, MAX_STEPS+1):
             # if step%500 == 0:
                 # logger.log(f"Episode:  {str(i).rjust(3)} / {EPISODES},  Step: {str(step).rjust(4)} / {MAX_STEPS}")
             
             agents_states, goals_states, obstacles_states, _ = world_utils.process_states_vector(
                 world_utils.get_worlds_current_state(worlds), MAX_OBSTACLES, WORLD_WIDTH, WORLD_HEIGHT, MAX_UNIT_OF_MOTION)
-
+            agents_states = agents_states.to(device)
+            goals_states = goals_states.to(device)
+            obstacles_states = obstacles_states.to(device)
+            
+            
             actions_logits, uom_logits = model(agents_states, goals_states, obstacles_states)
             action_dist = Categorical(logits=actions_logits / temperature)
             uom_dist = Categorical(logits=uom_logits)
@@ -106,26 +112,38 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
             u = uom_dist.sample()                          # + 1 if uom must be >= 1
             log_probs.append(action_dist.log_prob(a) + uom_dist.log_prob(u))   # (B,), has grad
             active_masks.append(active_mask.clone())
+            a_cpu = a.detach().cpu()
+            u_cpu = u.detach().cpu()
 
-            new_states = world_utils.move_worlds_to_next_state(worlds, a, u+1)
+            new_states = world_utils.move_worlds_to_next_state(worlds, a_cpu, u_cpu+1)
+            # new_states = world_utils.move_worlds_to_next_state(worlds, a, u+1)
             n_agents, n_goals, _, n_term = world_utils.process_states_vector(new_states, MAX_OBSTACLES, WORLD_WIDTH, WORLD_HEIGHT, MAX_UNIT_OF_MOTION)
+
+            n_agents = n_agents.to(device)
+            n_goals = n_goals.to(device)
+            n_term = n_term.to(device)
+            
             active_mask *= (n_term == 0).float()
             goal_xy = n_goals + n_agents[:, :2]
 
             r = reward_f.reward(agents_states, n_agents, goal_xy, n_term)      # (B,), no grad
 
+            a_list = a_cpu.tolist()
+            u_list = u_cpu.tolist()
+            r_list = r.detach().cpu().tolist()
+
             for w in range(NUMBER_OF_WORLDS):
-                actions[w].append(a[w].item())
-                uoms[w].append(u[w].item()+1)
-                rewards[w].append(r[w].item())
+                actions[w].append(a_list[w])
+                uoms[w].append(u_list[w] + 1)
+                rewards[w].append(r_list[w])
         
         
         log_probs_t = torch.stack(log_probs)               # (T, B), has grad
-        rewards_t   = torch.tensor(rewards).T              # rewards is B lists of T floats -> (T, B)
+        rewards_t = torch.tensor(rewards, dtype=torch.float32, device=device).T
         active_masks_t = torch.stack(active_masks)
 
         returns = torch.zeros_like(rewards_t)
-        G = torch.zeros(NUMBER_OF_WORLDS)
+        G = torch.zeros(NUMBER_OF_WORLDS, device=device)
         for t in reversed(range(MAX_STEPS)):
             G = rewards_t[t] + GAMMA * G
             returns[t] = G
@@ -134,9 +152,7 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
 
         adv = torch.zeros_like(returns)
 
-        adv[active_masks_t.bool()] = (
-            valid_returns - valid_returns.mean()
-        ) / (valid_returns.std() + 1e-8)
+        adv[active_masks_t.bool()] = (valid_returns - valid_returns.mean()) / (valid_returns.std(unbiased=False) + 1e-8)
 
 
         loss = -(log_probs_t * adv * active_masks_t).sum() / active_masks_t.sum().clamp_min(1)
