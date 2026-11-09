@@ -103,7 +103,6 @@ def train(world_configs: dict, network_configs: dict, training_configs: dict, co
             goals_states = goals_states.to(device)
             obstacles_states = obstacles_states.to(device)
             
-            
             actions_logits, uom_logits = model(agents_states, goals_states, obstacles_states)
             action_dist = Categorical(logits=actions_logits / temperature)
             uom_dist = Categorical(logits=uom_logits)
